@@ -1,6 +1,7 @@
 # CompIntel — AI Competitive Intelligence Platform
 
 
+https://github.com/user-attachments/assets/1ec1faa8-ef00-4170-8bf4-d1d86660b419
 
 > Full-stack AI research platform that generates sourced competitive intelligence briefings in under 30 seconds.
 
