@@ -10,11 +10,9 @@
   <link rel="stylesheet" href="styles.css" />
   <style>
     :root { --accent: #e7ff52; --accent-ink: #0a0a0b; }
-
-    /* ───── Refined nav ───── */
     .nav-search-wrap { display:flex; align-items:center; gap:0.5rem; }
-    .nav-search-box { display:flex; background:#0C1018; border:1px solid #1A2233; border-radius:6px; overflow:hidden; transition:border-color 0.15s, box-shadow 0.15s; }
-    .nav-search-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px rgba(231,255,82,0.08); }
+    .nav-search-box { display:flex; background:#0C1018; border:1px solid #1A2233; border-radius:6px; overflow:hidden; transition:border-color 0.15s; }
+    .nav-search-box:focus-within { border-color:var(--accent); }
     .nav-search-input { background:transparent; border:none; outline:none; padding:6px 10px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:#E8EDF5; width:220px; }
     .nav-search-input::placeholder { color:#3A4A60; }
     .nav-search-btn { background:var(--accent); border:none; padding:0 10px; cursor:pointer; font-family:'DM Mono',monospace; font-size:0.65rem; font-weight:600; color:#0a0a0b; letter-spacing:0.06em; text-transform:uppercase; transition:opacity 0.15s; }
@@ -22,8 +20,6 @@
     .nav-search-btn:disabled { opacity:0.4; cursor:not-allowed; }
     .nav-back-btn { background:none; border:1px solid #1A2233; border-radius:5px; padding:5px 10px; cursor:pointer; font-family:'DM Mono',monospace; font-size:0.65rem; color:#6A7A90; letter-spacing:0.06em; transition:all 0.15s; text-decoration:none; display:flex; align-items:center; gap:0.4rem; }
     .nav-back-btn:hover { border-color:var(--accent); color:var(--accent); }
-
-    /* ───── Loading & rerun ───── */
     #loading-screen { position:fixed; inset:0; background:#080B0F; z-index:500; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.5rem; }
     #loading-screen.hidden { display:none; }
     .ls-logo { font-family:'DM Mono',monospace; font-size:0.9rem; font-weight:600; color:#fff; letter-spacing:0.14em; text-transform:uppercase; }
@@ -46,283 +42,14 @@
     .rerun-bar { height:100%; background:var(--accent,#e7ff52); border-radius:1px; width:0%; transition:width 0.4s ease; }
     .toast { display:none; position:fixed; bottom:2rem; left:50%; transform:translateX(-50%); background:#1f0a0a; border:1px solid #3a1414; border-radius:6px; padding:0.75rem 1.2rem; font-size:0.84rem; color:#FF4757; z-index:600; white-space:nowrap; }
     .toast.visible { display:block; }
-
-    /* ═══════════════════════════════════════════
-       DESIGN UPGRADES
-       ═══════════════════════════════════════════ */
-
-    /* Section anchor scroll-padding so sticky nav doesn't cover */
-    html { scroll-padding-top: 64px; }
-
-    /* Subtle ambient grid behind body */
-    body::before {
-      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-      background-image:
-        linear-gradient(rgba(80,120,180,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(80,120,180,0.025) 1px, transparent 1px);
-      background-size: 56px 56px;
-      mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 80%);
-    }
-    .ci-app { position:relative; z-index:1; }
-
-    /* Refined hero */
-    .ci-hero {
-      padding: 56px 0 40px !important;
-      border-bottom: 1px solid var(--line);
-      position: relative;
-    }
-    .ci-hero::after {
-      content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      opacity: 0.4;
-    }
-    .ci-hero-tag { font-size: 10.5px !important; letter-spacing: 0.22em !important; }
-    .ci-hero-title {
-      font-weight: 600 !important;
-      font-size: clamp(48px, 6vw, 68px) !important;
-      letter-spacing: -0.025em !important;
-      line-height: 1.02 !important;
-    }
-    .ci-hero-summary { font-size: 16px !important; line-height: 1.65 !important; color: var(--ink-2) !important; max-width: 60ch !important; }
-
-    /* Hero price card — emphasised */
-    .ci-hero-price {
-      background: linear-gradient(180deg, #111418 0%, var(--bg-1) 100%) !important;
-      border: 1px solid var(--line) !important;
-      position: relative;
-      overflow: hidden;
-    }
-    .ci-hero-price::before {
-      content:''; position:absolute; top:0; left:0; right:0; height:1px;
-      background: linear-gradient(90deg, transparent, rgba(231,255,82,0.5), transparent);
-    }
-    .ci-hero-price-value {
-      font-family: var(--font-mono) !important;
-      font-size: 48px !important;
-      font-weight: 600 !important;
-      letter-spacing: -0.02em !important;
-      line-height: 1 !important;
-      margin: 8px 0 6px !important;
-    }
-
-    /* Sparkline canvas behind price */
-    .ci-spark {
-      position:absolute; right:0; bottom:0; width:60%; height:50%;
-      pointer-events:none; opacity:0.55;
-    }
-
-    /* Section numbers — bigger, monospaced */
-    .ci-sec { padding: 80px 0 32px !important; }
-    .ci-sec-head { margin-bottom: 36px !important; align-items: center !important; }
-    .ci-sec-num {
-      font-family: var(--font-mono);
-      font-size: 11px !important;
-      color: var(--ink-3) !important;
-      letter-spacing: 0.18em !important;
-      padding: 4px 8px !important;
-      background: rgba(231,255,82,0.05);
-      border: 1px solid rgba(231,255,82,0.2);
-      border-radius: 3px;
-    }
-    .ci-sec-title {
-      font-weight: 600 !important;
-      font-size: 32px !important;
-      letter-spacing: -0.02em !important;
-    }
-    .ci-sec-kicker { font-size: 13px !important; color: var(--ink-3) !important; margin-top: 6px !important; }
-
-    /* News list — cleaner timeline feel */
-    .ci-news {
-      border: 1px solid var(--line) !important;
-      background: transparent !important;
-      gap: 0 !important;
-    }
-    .ci-news-item {
-      background: var(--bg-1) !important;
-      padding: 22px 26px !important;
-      border-bottom: 1px solid var(--line);
-      position: relative;
-      transition: background 180ms, padding-left 180ms;
-    }
-    .ci-news-item:last-child { border-bottom: none; }
-    .ci-news-item:hover {
-      background: var(--bg-2) !important;
-      padding-left: 32px !important;
-    }
-    .ci-news-item::before {
-      content:''; position:absolute; left:0; top:22px; bottom:22px; width:2px;
-      background: var(--accent); opacity:0; transition: opacity 180ms;
-    }
-    .ci-news-item:hover::before { opacity: 1; }
-    .ci-news-title {
-      font-weight: 600;
-      font-size: 18px !important;
-      line-height: 1.3 !important;
-      letter-spacing: -0.01em;
-    }
-
-    /* Competitor cards — elevated */
-    .ci-comp {
-      background: linear-gradient(180deg, var(--bg-1) 0%, #0c0d0f 100%) !important;
-      transition: transform 200ms, border-color 200ms, box-shadow 200ms;
-      position: relative;
-    }
-    .ci-comp:hover {
-      transform: translateY(-2px);
-      border-color: var(--line-2) !important;
-      box-shadow: 0 12px 28px -12px rgba(0,0,0,0.6);
-    }
-    .ci-comp-mark {
-      width: 40px !important; height: 40px !important;
-      border-radius: 10px !important;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    }
-    .ci-comp-name { font-size: 16px !important; }
-
-    /* Sentiment gauge — refined */
-    .ci-sent-gauge {
-      background: linear-gradient(180deg, var(--bg-1) 0%, #0c0d0f 100%) !important;
-      padding: 28px 32px !important;
-    }
-    .ci-sent-score {
-      font-family: var(--font-mono) !important;
-      font-size: 72px !important;
-      font-weight: 600 !important;
-      letter-spacing: -0.03em !important;
-      line-height: 0.95 !important;
-    }
-    .ci-sent-track {
-      height: 8px !important;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
-    }
-
-    /* SWOT — corner accents */
-    .ci-swot-q { padding: 26px 28px !important; min-height: 300px !important; position: relative; }
-    .ci-swot-q::before {
-      content:''; position:absolute; top:0; left:0; width:32px; height:32px;
-      border-top: 1px solid currentColor;
-      border-left: 1px solid currentColor;
-      opacity: 0.25;
-    }
-    .ci-swot-S { color: var(--bull); }
-    .ci-swot-W { color: var(--bear); }
-    .ci-swot-O { color: var(--accent); }
-    .ci-swot-T { color: var(--warn); }
-    .ci-swot-q .ci-swot-head, .ci-swot-q .ci-swot-list { color: var(--ink); }
-    .ci-swot-letter {
-      font-family: var(--font-mono) !important;
-      font-size: 22px !important;
-      font-weight: 700 !important;
-      width: 36px; height: 36px;
-      display: grid; place-items: center;
-      border: 1px solid currentColor;
-      border-radius: 6px;
-    }
-    .ci-swot-title {
-      font-weight: 600;
-      font-size: 17px !important;
-    }
-
-    /* Investment thesis cards */
-    .ci-thesis {
-      padding: 22px 26px !important;
-      position: relative;
-      overflow: hidden;
-    }
-    .ci-thesis-bull { border-left: 3px solid var(--bull) !important; }
-    .ci-thesis-bear { border-left: 3px solid var(--bear) !important; }
-    .ci-thesis::after {
-      content: ''; position: absolute; top: 0; right: 0; width: 120px; height: 120px;
-      background: radial-gradient(circle at top right, var(--g-color, var(--bull)), transparent 70%);
-      opacity: 0.06; pointer-events: none;
-    }
-    .ci-thesis-bull { --g-color: var(--bull); }
-    .ci-thesis-bear { --g-color: var(--bear); }
-    .ci-thesis p { font-size: 14.5px !important; line-height: 1.65 !important; }
-
-    /* Strategy cards — tier indicator */
-    .ci-strat { padding: 22px 24px !important; transition: transform 200ms, border-color 200ms; }
-    .ci-strat:hover { transform: translateY(-2px); border-color: var(--line-2) !important; }
-    .ci-strat-name { font-size: 17px !important; font-weight: 600 !important; }
-    .ci-strats-title {
-      font-weight: 600;
-      font-size: 19px !important;
-      margin-bottom: 18px !important;
-    }
-
-    /* Catbox icons */
-    .ci-catbox h4 { font-size: 11px !important; letter-spacing: 0.16em !important; }
-    .ci-catbox li { font-size: 13.5px !important; line-height: 1.55 !important; }
-    .ci-catbox-arrow {
-      width: 18px; height: 18px; flex-shrink: 0;
-      display: inline-grid; place-items: center;
-      background: rgba(74,222,128,0.1);
-      border-radius: 4px;
-      font-size: 11px;
-    }
-    .ci-catbox-risk .ci-catbox-arrow { background: rgba(248,113,113,0.1); }
-
-    /* Reading-progress bar at top of nav */
-    .ci-progress {
-      position: fixed; top: 0; left: 0; height: 2px; width: 0%;
-      background: var(--accent); z-index: 51;
-      transition: width 80ms linear;
-      box-shadow: 0 0 8px rgba(231,255,82,0.5);
-    }
-
-    /* Side rail with section dots */
-    .ci-rail {
-      position: fixed; right: 18px; top: 50%; transform: translateY(-50%);
-      display: flex; flex-direction: column; gap: 10px; z-index: 40;
-    }
-    .ci-rail-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--line-2); border: 1px solid transparent;
-      cursor: pointer; transition: all 180ms;
-      position: relative;
-    }
-    .ci-rail-dot:hover { background: var(--ink-3); transform: scale(1.3); }
-    .ci-rail-dot.active { background: var(--accent); box-shadow: 0 0 0 3px rgba(231,255,82,0.15); }
-    .ci-rail-dot::after {
-      content: attr(data-label);
-      position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
-      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
-      color: var(--ink-3); white-space: nowrap;
-      background: var(--bg-1); border: 1px solid var(--line);
-      padding: 3px 8px; border-radius: 4px;
-      opacity: 0; pointer-events: none; transition: opacity 180ms;
-    }
-    .ci-rail-dot:hover::after { opacity: 1; }
-    @media (max-width: 1280px) { .ci-rail { display: none; } }
-
-    /* Section reveal animation */
-    .ci-sec, .ci-hero {
-      animation: section-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    }
-    .ci-sec:nth-child(2) { animation-delay: 0.05s; }
-    .ci-sec:nth-child(3) { animation-delay: 0.1s; }
-    .ci-sec:nth-child(4) { animation-delay: 0.15s; }
-    .ci-sec:nth-child(5) { animation-delay: 0.2s; }
-    @keyframes section-in {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Improved chip rendering */
-    .ci-chip { padding: 4px 10px !important; font-size: 10px !important; }
-
-    /* Hero meta time gets a clock dot */
-    .ci-hero-time::before {
-      content:'●'; color: var(--accent); margin-right: 6px; font-size: 8px;
-    }
-
-    /* Driver bars — taller */
-    .ci-bar { height: 5px !important; }
-
-    /* Strategy chip top accent stripe */
-    .ci-strat-cons { border-top: 3px solid var(--bull) !important; }
-    .ci-strat-mod { border-top: 3px solid var(--warn) !important; }
-    .ci-strat-agg { border-top: 3px solid var(--bear) !important; }
+    .bottom-search-wrap { text-align:center; padding:2rem 0 4rem 0; }
+    .bottom-search-label { font-family:'DM Mono',monospace; font-size:0.72rem; color:#3A4A60; margin-bottom:1rem; letter-spacing:0.08em; text-transform:uppercase; }
+    .bottom-search-box { display:inline-flex; background:#0C1018; border:1px solid #1A2233; border-radius:8px; overflow:hidden; transition:border-color 0.2s; }
+    .bottom-search-box:focus-within { border-color:var(--accent); }
+    .bottom-search-input { background:transparent; border:none; outline:none; padding:0.75rem 1rem; font-family:'DM Sans',sans-serif; font-size:0.9rem; color:#E8EDF5; width:320px; }
+    .bottom-search-input::placeholder { color:#3A4A60; }
+    .bottom-search-btn { background:var(--accent); border:none; padding:0 1.2rem; cursor:pointer; font-family:'DM Mono',monospace; font-size:0.75rem; font-weight:600; color:#0a0a0b; letter-spacing:0.08em; text-transform:uppercase; transition:opacity 0.15s; }
+    .bottom-search-btn:hover { opacity:0.85; }
   </style>
 </head>
 <body>
@@ -343,7 +70,6 @@
     <div class="rerun-bar-wrap"><div class="rerun-bar" id="rerun-bar"></div></div>
   </div>
   <div class="toast" id="toast"></div>
-  <div class="ci-progress" id="ci-progress"></div>
   <div id="root"></div>
 
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
@@ -353,10 +79,6 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useMemo } = React;
     const { useState: useS, useEffect: useE, useRef: useR } = React;
-
-    // ═══════════════════════════════════════════════════
-    // SHARED ATOMS
-    // ═══════════════════════════════════════════════════
 
     const Chip = ({ children, tone, className }) => {
       tone = tone || "neutral"; className = className || "";
@@ -402,56 +124,11 @@
       );
     };
 
-    // Decorative sparkline behind hero price (deterministic from delta)
-    const Sparkline = ({ deltaPct }) => {
-      const canvasRef = useR(null);
-      useE(() => {
-        const c = canvasRef.current; if (!c) return;
-        const dpr = window.devicePixelRatio || 1;
-        const w = c.clientWidth, h = c.clientHeight;
-        c.width = w * dpr; c.height = h * dpr;
-        const ctx = c.getContext("2d");
-        ctx.scale(dpr, dpr);
-        const seed = Math.abs(Math.round((deltaPct || 0) * 100)) || 7;
-        const N = 40;
-        const pts = [];
-        let v = h * 0.55;
-        for (let i = 0; i < N; i++) {
-          const noise = (Math.sin(i * 1.7 + seed) + Math.sin(i * 0.9 + seed * 2)) * 6;
-          v = v + noise * 0.4;
-          v = Math.max(h * 0.2, Math.min(h * 0.85, v));
-          pts.push([i / (N - 1) * w, v]);
-        }
-        // Trend bias toward delta direction
-        const bias = (deltaPct || 0) * 1.5;
-        for (let i = 0; i < N; i++) pts[i][1] -= (i / (N - 1)) * bias;
-        // Stroke
-        ctx.beginPath();
-        pts.forEach(([x,y],i) => i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y));
-        const positive = (deltaPct || 0) >= 0;
-        ctx.strokeStyle = positive ? "#4ade80" : "#f87171";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        // Fill
-        ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
-        const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, positive ? "rgba(74,222,128,0.25)" : "rgba(248,113,113,0.25)");
-        grad.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = grad;
-        ctx.fill();
-      }, [deltaPct]);
-      return <canvas ref={canvasRef} className="ci-spark" />;
-    };
-
-    // ═══════════════════════════════════════════════════
-    // HERO
-    // ═══════════════════════════════════════════════════
-
     const Hero = ({ data }) => {
-      const price = typeof data.price === "number" ? "$" + data.price.toFixed(2) : (data.price || "N/A");
-      const change = typeof data.change === "number" ? (data.change > 0 ? "+" : "") + "$" + data.change.toFixed(2) + " today" : (data.change || "");
-      const deltaPct = typeof data.deltaPct === "number" ? Math.abs(data.deltaPct).toFixed(2) + "%" : String(data.deltaPct || "");
-      const deltaNum = typeof data.deltaPct === "number" ? data.deltaPct : parseFloat(data.deltaPct);
+      const price      = typeof data.price === "number" ? "$" + data.price.toFixed(2) : (data.price || "N/A");
+      const change     = typeof data.change === "number" ? (data.change > 0 ? "+" : "") + "$" + data.change.toFixed(2) + " today" : (data.change || "");
+      const deltaPct   = typeof data.deltaPct === "number" ? Math.abs(data.deltaPct).toFixed(2) + "%" : String(data.deltaPct || "");
+      const deltaNum   = typeof data.deltaPct === "number" ? data.deltaPct : parseFloat(data.deltaPct);
       const deltaArrow = deltaNum > 0 ? "▲" : "▼";
       return (
         <section className="ci-hero" data-screen-label="Hero">
@@ -473,26 +150,21 @@
             </div>
             <div className="ci-hero-r">
               <div className="ci-hero-price">
-                <Sparkline deltaPct={deltaNum} />
                 <div className="ci-hero-price-label">LAST</div>
                 <div className="ci-hero-price-value">{price}</div>
                 <div className="ci-hero-price-sub">{change}</div>
               </div>
               <div className="ci-hero-stats">
                 <Stat label="MARKET CAP" value={data.marketCap || "N/A"} />
-                <Stat label="P/E (TTM)" value={data.pe || "N/A"} />
-                <Stat label="52W RANGE" value={data.range || "N/A"} />
-                <Stat label="ANALYST" value={data.analyst || "N/A"} tone="bull" />
+                <Stat label="P/E (TTM)"  value={data.pe || "N/A"} />
+                <Stat label="52W RANGE"  value={data.range || "N/A"} />
+                <Stat label="ANALYST"    value={data.analyst || "N/A"} tone="bull" />
               </div>
             </div>
           </div>
         </section>
       );
     };
-
-    // ═══════════════════════════════════════════════════
-    // 01 NEWS
-    // ═══════════════════════════════════════════════════
 
     const NewsSection = ({ items }) => (
       <section className="ci-sec" id="news" data-screen-label="01 News">
@@ -515,10 +187,6 @@
         </ol>
       </section>
     );
-
-    // ═══════════════════════════════════════════════════
-    // 02 COMPETITORS
-    // ═══════════════════════════════════════════════════
 
     const CompetitorsSection = ({ items }) => (
       <section className="ci-sec" id="competitors" data-screen-label="02 Competitors">
@@ -554,12 +222,8 @@
       </section>
     );
 
-    // ═══════════════════════════════════════════════════
-    // 03 SENTIMENT
-    // ═══════════════════════════════════════════════════
-
     const SentimentSection = ({ data }) => {
-      const score = data.score;
+      const score      = data.score;
       const pointerPct = ((score + 100) / 200) * 100;
       return (
         <section className="ci-sec" id="sentiment" data-screen-label="03 Sentiment">
@@ -610,10 +274,6 @@
       );
     };
 
-    // ═══════════════════════════════════════════════════
-    // 04 SWOT
-    // ═══════════════════════════════════════════════════
-
     const SWOT_META = {
       S: { tone: "bull",   title: "Strengths" },
       W: { tone: "bear",   title: "Weaknesses" },
@@ -648,10 +308,6 @@
         </div>
       </section>
     );
-
-    // ═══════════════════════════════════════════════════
-    // 05 INVESTMENT
-    // ═══════════════════════════════════════════════════
 
     const InvestmentSection = ({ data }) => (
       <section className="ci-sec" id="investment" data-screen-label="05 Investment">
@@ -725,63 +381,10 @@
       </footer>
     );
 
-    // ═══════════════════════════════════════════════════
-    // SIDE RAIL + READING PROGRESS
-    // ═══════════════════════════════════════════════════
-
-    const SideRail = () => {
-      const [active, setActive] = useS("news");
-      useE(() => {
-        const ids = ["news","competitors","sentiment","swot","investment"];
-        const onScroll = () => {
-          const y = window.scrollY + 120;
-          let cur = ids[0];
-          for (const id of ids) {
-            const el = document.getElementById(id);
-            if (el && el.offsetTop <= y) cur = id;
-          }
-          setActive(cur);
-          // Reading progress bar
-          const total = document.body.scrollHeight - window.innerHeight;
-          const pct = Math.max(0, Math.min(100, (window.scrollY / total) * 100));
-          const bar = document.getElementById("ci-progress");
-          if (bar) bar.style.width = pct + "%";
-        };
-        window.addEventListener("scroll", onScroll, { passive: true });
-        onScroll();
-        return () => window.removeEventListener("scroll", onScroll);
-      }, []);
-      const items = [
-        { id: "news", label: "01 · NEWS" },
-        { id: "competitors", label: "02 · COMPETITORS" },
-        { id: "sentiment", label: "03 · SENTIMENT" },
-        { id: "swot", label: "04 · SWOT" },
-        { id: "investment", label: "05 · INVESTMENT" },
-      ];
-      return (
-        <div className="ci-rail" aria-hidden="true">
-          {items.map((it) => (
-            <div key={it.id}
-              className={"ci-rail-dot" + (active === it.id ? " active" : "")}
-              data-label={it.label}
-              onClick={() => {
-                const el = document.getElementById(it.id);
-                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            />
-          ))}
-        </div>
-      );
-    };
-
-    // ═══════════════════════════════════════════════════
-    // CHATBOT
-    // ═══════════════════════════════════════════════════
-
     const SUGGESTIONS = [
       "Which strategy is best for a beginner?",
-      "Explain the P/E ratio",
-      "Why is sentiment improving?",
+      "Search for the latest news on this company",
+      "What is the P/E ratio and is this one good?",
       "What's the biggest risk right now?",
     ];
 
@@ -830,7 +433,7 @@
 
     function renderAssistant(text) {
       const parts = [];
-      const re = /\[(0[1-5])\]/g;
+      const re    = /\[(0[1-5])\]/g;
       let last = 0, match, key = 0;
       while ((match = re.exec(text)) !== null) {
         if (match.index > last) parts.push(<span key={key++}>{text.slice(last, match.index)}</span>);
@@ -866,7 +469,7 @@
     const ChatWindow = ({ open, briefing, onClose, apiBase }) => {
       const [messages, setMessages] = useS([{
         role: "assistant",
-        text: "Hi — I have loaded your briefing on " + briefing.hero.name + ". Ask me anything about this report. I can explain the P/E ratio, walk through the strategies in [05], or unpack what is driving the sentiment score in [03].",
+        text: "Hi — I have loaded your briefing on " + briefing.hero.name + ". Ask me anything about this report, or I can search the web for anything beyond it — recent news, live prices, general finance questions.",
       }]);
       const [draft, setDraft] = useS("");
       const [busy,  setBusy]  = useS(false);
@@ -879,7 +482,7 @@
       }, [messages, busy, tool]);
 
       useE(() => {
-        if (open) setTimeout(function() { if (inputRef.current) inputRef.current.focus(); }, 250);
+        if (open) setTimeout(() => { if (inputRef.current) inputRef.current.focus(); }, 250);
       }, [open]);
 
       const send = async (text) => {
@@ -889,29 +492,43 @@
         setBusy(true);
         setMessages((m) => [...m, { role: "user", text: q }]);
         let stepIdx = 0;
-        const stepTimer = setInterval(function() {
+        const stepTimer = setInterval(() => {
           setTool(TOOL_STEPS[stepIdx % TOOL_STEPS.length].label);
           stepIdx++;
         }, 700);
         setTool(TOOL_STEPS[0].label);
+
         try {
           const history = messages
             .filter((m) => m.role === "user" || m.role === "assistant")
             .map((m) => ({ role: m.role, content: m.text }));
-          history.push({ role: "user", content: q + "\n\nWhen citing sections use: [01] News, [02] Competitors, [03] Sentiment, [04] SWOT, [05] Investment." });
+          history.push({
+            role: "user",
+            content: q + "\n\nWhen citing report sections use: [01] News, [02] Competitors, [03] Sentiment, [04] SWOT, [05] Investment.",
+          });
+
           const base = apiBase || "http://127.0.0.1:8001";
           const res = await fetch(base + "/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ company: briefing.hero.symbol || briefing.hero.name, briefing: briefing, messages: history }),
+            body: JSON.stringify({
+              company:  briefing.hero.symbol || briefing.hero.name,
+              briefing: briefing,
+              messages: history,
+            }),
           });
+
           clearInterval(stepTimer);
           setTool(null);
+
           if (!res.ok) throw new Error("Server error " + res.status);
+
           let fullText = "";
           setMessages((m) => [...m, { role: "assistant", text: "" }]);
+
           const reader  = res.body.getReader();
           const decoder = new TextDecoder();
+
           while (true) {
             const result = await reader.read();
             if (result.done) break;
@@ -924,10 +541,17 @@
                 if (data === "[DONE]") break;
                 try {
                   const parsed = JSON.parse(data);
-                  if (parsed.text) {
+                  if (parsed.tool) {
+                    setTool(parsed.tool);
+                  } else if (parsed.text) {
+                    setTool(null);
                     fullText += parsed.text;
                     const snap = fullText;
-                    setMessages((m) => { const u = [...m]; u[u.length-1] = { role: "assistant", text: snap }; return u; });
+                    setMessages((m) => {
+                      const u = [...m];
+                      u[u.length - 1] = { role: "assistant", text: snap };
+                      return u;
+                    });
                   }
                 } catch(e) {}
               }
@@ -950,7 +574,7 @@
                 <div className="ci-chat-name">CompIntel Assistant</div>
                 <div className="ci-chat-status">
                   <span className="ci-chat-statdot" />
-                  {"Context · " + (briefing.hero.symbol || briefing.hero.name) + " briefing"}
+                  {"Context · " + (briefing.hero.symbol || briefing.hero.name) + " · Web search enabled"}
                 </div>
               </div>
             </div>
@@ -967,11 +591,13 @@
               </button>
             </div>
           </header>
+
           <div className="ci-chat-scroll" ref={scrollRef}>
             {messages.map((msg, i) => <Bubble key={i} msg={msg} />)}
             {tool && <Bubble msg={{ role: "tool", text: tool }} />}
             {busy && !tool && <TypingDots />}
           </div>
+
           {messages.length <= 1 && !busy && (
             <div className="ci-chat-suggest">
               {SUGGESTIONS.map((s) => (
@@ -979,16 +605,22 @@
               ))}
             </div>
           )}
+
           <form className="ci-chat-input" onSubmit={(e) => { e.preventDefault(); send(); }}>
-            <input ref={inputRef} value={draft} onChange={(e) => setDraft(e.target.value)}
-              placeholder={"Ask about " + (briefing.hero.symbol || briefing.hero.name) + "..."} disabled={busy} />
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={"Ask about " + (briefing.hero.symbol || briefing.hero.name) + " or search the web..."}
+              disabled={busy}
+            />
             <button type="submit" disabled={busy || !draft.trim()} className="ci-chat-send" aria-label="Send">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
               </svg>
             </button>
           </form>
-          <div className="ci-chat-foot"><span>Powered by Claude · grounded in your briefing</span></div>
+          <div className="ci-chat-foot"><span>Powered by Claude · Report + live web search</span></div>
         </div>
       );
     };
@@ -1003,11 +635,7 @@
       );
     };
 
-    // ═══════════════════════════════════════════════════
-    // MAIN APP
-    // ═══════════════════════════════════════════════════
-
-    const API_BASE = "http://127.0.0.1:8001";
+    const API_BASE    = "http://127.0.0.1:8001";
     const RERUN_STEPS = ["rs-news","rs-competitors","rs-sentiment","rs-swot","rs-investment"];
     let rrStepIdx = 0, rrStepTimer = null, rrBarPct = 0, rrBarTimer = null;
 
@@ -1072,6 +700,7 @@
         setTimeout(() => {
           document.getElementById("rerun-overlay").classList.remove("visible");
           setBriefing(briefing);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         }, 500);
       } catch(err) {
         stopRerun();
@@ -1165,13 +794,11 @@
       const handleNewReport = (company) => runNewReport(company, (b) => {
         setBriefing(b);
         document.title = "CompIntel · " + (b.ticker && b.ticker.symbol ? b.ticker.symbol : b.hero.name);
-        window.scrollTo({ top: 0, behavior: "smooth" });
       });
 
       return (
         <div className={"ci-app density-" + tweaks.density}>
           <TopNavWithSearch briefing={briefing} onNewReport={handleNewReport} />
-          <SideRail />
           <main className="ci-shell">
             <Hero data={briefing.hero} />
             <NewsSection items={briefing.news || []} />
@@ -1181,6 +808,33 @@
             <InvestmentSection data={briefing.investment || { signal:"Neutral", bull:"", bear:"", catalysts:[], risks:[], strategies:[] }} />
           </main>
           <Foot />
+
+          <div className="bottom-search-wrap">
+            <div className="bottom-search-label">Run a new report</div>
+            <div className="bottom-search-box">
+              <input
+                id="bottom-search-input"
+                className="bottom-search-input"
+                placeholder="Enter a company or industry..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const val = document.getElementById("bottom-search-input").value.trim();
+                    if (val) handleNewReport(val);
+                  }
+                }}
+              />
+              <button
+                className="bottom-search-btn"
+                onClick={() => {
+                  const val = document.getElementById("bottom-search-input").value.trim();
+                  if (val) handleNewReport(val);
+                }}
+              >
+                Run →
+              </button>
+            </div>
+          </div>
+
           {tweaks.showChat && <Chatbot briefing={briefing} apiBase={API_BASE} />}
         </div>
       );
