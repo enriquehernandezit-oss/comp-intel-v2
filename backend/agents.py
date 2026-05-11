@@ -28,11 +28,11 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 MODEL  = "claude-haiku-4-5-20251001"
 
 
-# ── Shared date string (computed once at import time) ───────────────────────
+# ── Shared date string ───────────────────────────────────────────────────────
 TODAY_STR = datetime.now(timezone.utc).strftime("%B %d, %Y")
 
 
-# ── JSON parser (handles markdown-wrapped responses) ────────────────────────
+# ── JSON parser ──────────────────────────────────────────────────────────────
 def parse_json(text: str, client_ref=None, prompt_ref=None) -> dict:
     start = text.find("{")
     end   = text.rfind("}") + 1
@@ -41,7 +41,6 @@ def parse_json(text: str, client_ref=None, prompt_ref=None) -> dict:
     try:
         return json.loads(text[start:end])
     except json.JSONDecodeError:
-        # Ask Claude to fix the broken JSON
         fix_prompt = f"""The following JSON is malformed. Fix it and return ONLY valid JSON, nothing else:
 
 {text[start:end]}"""
@@ -50,10 +49,87 @@ def parse_json(text: str, client_ref=None, prompt_ref=None) -> dict:
             max_tokens=3000,
             messages=[{"role": "user", "content": fix_prompt}]
         )
-        fixed = fix_response.content[0].text
+        fixed   = fix_response.content[0].text
         f_start = fixed.find("{")
         f_end   = fixed.rfind("}") + 1
         return json.loads(fixed[f_start:f_end])
+
+
+# ── Yahoo Finance data fetcher ───────────────────────────────────────────────
+def get_yahoo_finance_data(ticker: str) -> dict:
+    """
+    Pull real-time financial data directly from Yahoo Finance.
+    Returns empty dict if ticker not found or company is private.
+    """
+    try:
+        import yfinance as yf
+        stock = yf.Ticker(ticker)
+        info  = stock.info
+
+        if not info.get("marketCap"):
+            return {}
+
+        price      = info.get("currentPrice") or info.get("regularMarketPrice")
+        prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
+        change_pct = ((price - prev_close) / prev_close * 100) if price and prev_close else None
+
+        market_cap = info.get("marketCap")
+        if market_cap:
+            if market_cap >= 1_000_000_000_000:
+                mc_str = f"${market_cap/1_000_000_000_000:.2f}T"
+            elif market_cap >= 1_000_000_000:
+                mc_str = f"${market_cap/1_000_000_000:.2f}B"
+            else:
+                mc_str = f"${market_cap/1_000_000:.2f}M"
+        else:
+            mc_str = None
+
+        pe        = info.get("trailingPE") or info.get("forwardPE")
+        week_low  = info.get("fiftyTwoWeekLow")
+        week_high = info.get("fiftyTwoWeekHigh")
+        target    = info.get("targetMeanPrice")
+        rating    = info.get("recommendationKey", "").replace("_", " ").title()
+
+        return {
+            "ticker":         info.get("symbol", ticker.upper()),
+            "exchange":       info.get("exchange", ""),
+            "current_price":  f"${price:.2f}" if price else None,
+            "price_change":   f"{change_pct:+.2f}%" if change_pct is not None else None,
+            "price_as_of":    "Yahoo Finance · Real-time",
+            "market_cap":     mc_str,
+            "pe_ratio":       f"{pe:.2f}" if pe else None,
+            "pe_note":        "Negative earnings — company reporting losses" if pe and pe < 0 else None,
+            "52_week_range":  f"${week_low:.2f} – ${week_high:.2f}" if week_low and week_high else None,
+            "price_target":   f"${target:.2f}" if target else None,
+            "analyst_rating": rating if rating else None,
+            "is_public":      True,
+        }
+    except Exception:
+        return {}
+
+
+# ── Ticker resolver ──────────────────────────────────────────────────────────
+def resolve_ticker(company: str) -> str:
+    """
+    Try to resolve a ticker symbol from a company name using yfinance search.
+    """
+    try:
+        import yfinance as yf
+
+        # Try direct lookup first
+        ticker = yf.Ticker(company.upper())
+        info   = ticker.info
+        if info.get("marketCap"):
+            return company.upper()
+
+        # Try search
+        results = yf.Search(company, max_results=1)
+        quotes  = results.quotes
+        if quotes:
+            return quotes[0].get("symbol", "")
+        return ""
+    except Exception:
+        return ""
 
 
 # ── AGENT 1: News Search Agent ───────────────────────────────────────────────
@@ -272,21 +348,43 @@ def agent_investment(company: str, news_state: dict, competitor_state: dict, sen
             market_status = f"AFTER-HOURS — {time_utc}"
             market_note   = "After-hours session. Prices may differ from regular close."
 
-    # Three targeted searches instead of one generic one
-    price_results       = search_stock_price(company, max_results=5)
-    fundamental_results = search_stock_fundamentals(company, max_results=5)
-    analyst_results     = search_analyst_ratings(company, max_results=4)
+    # ── Step 1: Get real Yahoo Finance data ───────────────────────────────
+    ticker_guess = resolve_ticker(company)
+    yf_data      = {}
+    if ticker_guess:
+        yf_data = get_yahoo_finance_data(ticker_guess)
+
+    is_public = bool(yf_data)
+
+    # ── Step 2: Get analyst web context for strategy quality ──────────────
+    analyst_results = search_analyst_ratings(company, ticker=ticker_guess, max_results=5)
+
+    # ── Step 3: Build financial section for prompt ────────────────────────
+    if is_public:
+        financial_section = f"""
+LIVE YAHOO FINANCE DATA — USE THESE EXACT FIGURES, DO NOT CHANGE THEM:
+Ticker: {yf_data.get('ticker')}
+Exchange: {yf_data.get('exchange')}
+Current Price: {yf_data.get('current_price')}
+Price Change Today: {yf_data.get('price_change')}
+Market Cap: {yf_data.get('market_cap')}
+P/E Ratio: {yf_data.get('pe_ratio')}
+52-Week Range: {yf_data.get('52_week_range')}
+Analyst Price Target: {yf_data.get('price_target')}
+Analyst Rating: {yf_data.get('analyst_rating')}
+"""
+    else:
+        financial_section = f"""
+COMPANY STATUS: {company} appears to be privately held — ticker could not be resolved.
+Set all financial metrics (price, market cap, P/E, etc.) to null.
+Focus analysis entirely on business fundamentals.
+"""
+
+    current_price_str = yf_data.get('current_price', 'N/A') if is_public else 'N/A'
 
     prompt = f"""You are a buy-side equity analyst. Today's date is {TODAY_STR}. We are in 2026. Market status: {market_status}.
 
-EXTRACTION RULES — READ CAREFULLY:
-1. Extract financial figures from the search results even if they appear inside sentences, paragraphs, or tables — not just structured data.
-2. For any publicly traded company, market cap, 52-week range, and analyst rating WILL exist somewhere in the results — find them.
-3. If P/E is negative, still report it as a string e.g. "-151.29" — do NOT set it to null. Only set pe_ratio to null if no P/E figure appears anywhere in the results.
-4. pe_note is for context only — use it to explain negative P/E or special situations, but always populate pe_ratio if any number exists.
-5. For price_as_of: extract the most recent date mentioned alongside any price figure.
-6. Never reference 2025 as current or future — we are in 2026.
-7. analyst_rating must be one of: Buy / Overweight / Hold / Underweight / Sell / Mixed — extract the consensus from results.
+{financial_section}
 
 All prior research on {company}:
 
@@ -305,55 +403,57 @@ Weaknesses: {json.dumps([w.get("point","") for w in swot_state.get("weaknesses",
 Opportunities: {json.dumps([o.get("point","") for o in swot_state.get("opportunities", [])], indent=2)}
 Threats: {json.dumps([t.get("point","") for t in swot_state.get("threats", [])], indent=2)}
 
---- PRICE & MARKET DATA (search these carefully for all figures) ---
-{json.dumps(price_results, indent=2)}
-
---- FUNDAMENTALS DATA (PE ratio, market cap, 52-week range) ---
-{json.dumps(fundamental_results, indent=2)}
-
---- ANALYST RATINGS DATA ---
+ANALYST WEB CONTEXT (for strategy quality only — do NOT use for price figures):
 {json.dumps(analyst_results, indent=2)}
+
+CRITICAL RULES:
+1. All financial metrics in your JSON must match the Yahoo Finance data above EXACTLY
+2. Never reference 2025 as current — we are in 2026
+3. If company is private, set all financial fields to null
+4. All strategy entry zones, targets, and stop losses must use the actual current price: {current_price_str}
+5. Never invent or estimate any financial figure
 
 Return ONLY a JSON object:
 {{
-  "is_publicly_traded": true or false,
-  "ticker": "e.g. INTC or null",
-  "exchange": "e.g. NASDAQ, NYSE or null",
-  "current_price": "e.g. $21.37 — extract from price data",
-  "price_change": "e.g. +2.3% or -1.1% — extract from price data",
-  "price_as_of": "most recent date found alongside a price figure",
-  "market_cap": "e.g. $91.2B — extract from any section",
-  "analyst_rating": "consensus rating from analyst data",
-  "pe_ratio": "report as string even if negative e.g. -151.29 — only null if completely absent",
-  "pe_note": "context for pe_ratio e.g. Negative P/E reflects current losses — company in turnaround phase, or null if P/E is normal",
-  "52_week_range": "e.g. $17.53 - $37.16 — extract from fundamentals data",
-  "price_target": "analyst consensus price target",
-  "investment_thesis": "3-4 sentence bull case — specific products, numbers, 2026 catalysts",
-  "bear_case": "2-3 sentence bear case — specific 2026 risks",
-  "key_catalysts": ["2026 catalyst 1", "2026 catalyst 2", "2026 catalyst 3"],
-  "key_risks": ["2026 risk 1", "2026 risk 2", "2026 risk 3"],
+  "is_publicly_traded": {str(is_public).lower()},
+  "ticker": "{yf_data.get('ticker', '') if is_public else 'null'}",
+  "exchange": "{yf_data.get('exchange', '') if is_public else 'null'}",
+  "current_price": "{yf_data.get('current_price', 'null') if is_public else 'null'}",
+  "price_change": "{yf_data.get('price_change', 'null') if is_public else 'null'}",
+  "price_as_of": "Yahoo Finance · Real-time",
+  "market_cap": "{yf_data.get('market_cap', 'null') if is_public else 'null'}",
+  "analyst_rating": "{yf_data.get('analyst_rating', 'null') if is_public else 'null'}",
+  "pe_ratio": "{yf_data.get('pe_ratio', 'null') if is_public else 'null'}",
+  "pe_note": "{yf_data.get('pe_note', '') if is_public else 'null'}",
+  "52_week_range": "{yf_data.get('52_week_range', 'null') if is_public else 'null'}",
+  "price_target": "{yf_data.get('price_target', 'null') if is_public else 'null'}",
+  "investment_thesis": "3-4 sentence bull case using actual price {current_price_str} and real metrics — specific products, numbers, 2026 catalysts",
+  "bear_case": "2-3 sentence bear case grounded in specific 2026 risks",
+  "key_catalysts": ["specific 2026 catalyst 1", "specific 2026 catalyst 2", "specific 2026 catalyst 3"],
+  "key_risks": ["specific 2026 risk 1", "specific 2026 risk 2", "specific 2026 risk 3"],
   "strategies": [
     {{
-      "name": "strategy name e.g. Momentum Long, Covered Call Income, Dollar-Cost Average, Wait for Catalyst, Short-Term Put Hedge",
+      "name": "strategy name e.g. Momentum Long, Covered Call Income, Bull Call Spread",
       "type": "Bullish / Bearish / Neutral / Income / Hedging",
       "timeframe": "short-term (days-weeks) / medium-term (months) / long-term (1yr+)",
-      "rationale": "2-3 sentences explaining why this strategy makes sense given current price action, sentiment, competitive position, and 2026 catalysts specifically",
-      "entry_signal": "specific and measurable trigger — e.g. price closes above $23.50 on volume above 30-day average, RSI crosses above 45 from oversold, next earnings beat consensus by >5%",
-      "entry_price_zone": "specific price range to enter e.g. $20.00 - $22.50, or 'at market' if momentum play",
-      "position_sizing": "e.g. 2-5% of portfolio for speculative, 5-8% for conviction play, scale in over 3 tranches",
-      "target": "specific price target or % gain e.g. $28.00 (+32%) within 6 months, or yield target for income strategies",
-      "stop_loss": "specific stop loss level e.g. hard stop at $18.50 (-12%), or trailing stop 8% below peak",
-      "exit_conditions": "list 2-3 specific conditions that would trigger exit e.g. earnings miss >10%, CEO departure, price breaks below 200-day MA",
+      "rationale": "2-3 sentences tied to current price {current_price_str} and 2026 conditions",
+      "entry_signal": "specific measurable trigger based on current price {current_price_str}",
+      "entry_price_zone": "specific dollar range based on current price {current_price_str}",
+      "position_sizing": "e.g. 3-5% of portfolio, scale in over 2-3 tranches",
+      "target": "specific price target with % upside from {current_price_str}",
+      "stop_loss": "specific stop loss dollar amount below {current_price_str}",
+      "exit_conditions": ["condition 1", "condition 2", "condition 3"],
       "risk_level": "Low / Medium / High / Speculative",
-      "catalysts_needed": "what specific events need to happen for this strategy to work e.g. Q2 2026 earnings beat, 18A node production ramp confirmed, Fed rate cut"
+      "catalysts_needed": "specific events needed for this strategy to work"
     }}
-  ],
   ],
   "overall_signal": "Bullish / Neutral / Bearish",
   "disclaimer": "This is AI-generated analysis for informational purposes only. Not financial advice. Always consult a licensed financial advisor before making investment decisions."
 }}
 
-Include 3 strategies that are meaningfully different from each other — one bullish/growth play, one income or hedging play, and one speculative or options-based play. Each strategy must be detailed enough for a retail investor to execute without additional research. Use actual price levels from the search results wherever possible.
+Include 3 strategies: one bullish/growth, one income or hedging, one speculative.
+If company is private set all financial fields to null and focus on fundamentals.
+
 Return ONLY the JSON object. No explanation."""
 
     response = client.messages.create(
@@ -363,6 +463,30 @@ Return ONLY the JSON object. No explanation."""
     )
 
     result = parse_json(response.content[0].text)
+
+    # ── Hard override — always use Yahoo Finance data, never Claude's version ──
+    if is_public and yf_data:
+        result["current_price"]      = yf_data.get("current_price")  or result.get("current_price")
+        result["price_change"]       = yf_data.get("price_change")   or result.get("price_change")
+        result["market_cap"]         = yf_data.get("market_cap")     or result.get("market_cap")
+        result["pe_ratio"]           = yf_data.get("pe_ratio")       or result.get("pe_ratio")
+        result["52_week_range"]      = yf_data.get("52_week_range")  or result.get("52_week_range")
+        result["price_target"]       = yf_data.get("price_target")   or result.get("price_target")
+        result["analyst_rating"]     = yf_data.get("analyst_rating") or result.get("analyst_rating")
+        result["price_as_of"]        = "Yahoo Finance · Real-time"
+        result["ticker"]             = yf_data.get("ticker")         or result.get("ticker")
+        result["exchange"]           = yf_data.get("exchange")       or result.get("exchange")
+        result["is_publicly_traded"] = True
+    elif not is_public:
+        result["current_price"]      = None
+        result["price_change"]       = None
+        result["market_cap"]         = None
+        result["pe_ratio"]           = None
+        result["52_week_range"]      = None
+        result["price_target"]       = None
+        result["analyst_rating"]     = None
+        result["is_publicly_traded"] = False
+
     result["market_status"] = market_status
     result["market_note"]   = market_note
 
