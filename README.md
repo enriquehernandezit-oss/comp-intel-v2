@@ -4,8 +4,6 @@
 
 > Full-stack AI research platform that generates sourced competitive intelligence briefings in under 30 seconds.
 
-![Stack](https://img.shields.io/badge/Stack-Python%20%7C%20FastAPI%20%7C%20React%20%7C%20Claude-black?style=flat-square) ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-
 ---
 
 
